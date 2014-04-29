@@ -105,5 +105,4 @@ class VacancyText
     {
         return $this->vacancy;
     }
-
 }

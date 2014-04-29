@@ -72,5 +72,24 @@ class Vacancy
         return $this->vacancyTexts;
     }
 
+    /**
+     * @param string $language a two-letter language-code
+     *
+     * @return VacancyText|null
+     */
+    public function getVacancyTextByLanguage( $language ) {
+        //TODO: Replace with ArrayCollection::matching() call
+        if ( empty( $this->vacancyTexts ) ) {
+            return null;
+        }
 
+        foreach ( $this->vacancyTexts as $vt ) {
+            /** VacancyText $vt */
+            if ( $vt->getLanguage() == $language ) {
+                return $vt;
+            }
+        }
+
+        return null;
+    }
 }

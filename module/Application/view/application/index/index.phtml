@@ -1,4 +1,42 @@
 <div class="row">
-
+    <div class="row">
+        <?php echo $this->form()->openTag($searchForm); ?>
+        <?php echo $this->formCollection($searchForm); ?>
+        <?php echo $this->form()->closeTag(); ?>
+    </div>
+    <?php
+    if (!empty($vacancies)) {
+        ?>
+        <table class="table table-bordered">
+            <tr>
+                <th>Division</th>
+                <th>Language</th>
+                <th>Title</th>
+                <th>Description</th>
+            </tr>
+            <?php
+            foreach ($vacancies as $vacancy) {
+                /** @var Application\Entity\Vacancy $vacancy */
+                $search['language'] = 'ru';
+                $vacancyText = $vacancy->getVacancyTextByLanguage($search['language']);
+                if (empty($vacancyText)) {
+                    $vacancyText = $vacancy->getVacancyTextByLanguage('en');
+                    if (empty($vacancyText)) {
+                        //TODO: log such event somehow
+                        continue;
+                    }
+                }
+                ?>
+                <tr>
+                    <td><?php echo $vacancy->getDivision()->getTitle(); ?></td>
+                    <td><?php echo $vacancyText->getLanguage(); ?></td>
+                    <td><?php echo $vacancyText->getTitleText(); ?></td>
+                    <td><?php echo $vacancyText->getDescriptionText(); ?></td>
+                </tr>
+            <?php } ?>
+        </table>
+    <?php } else {
+        echo 'No vacancies found';
+    } ?>
 
 </div>
