@@ -1,7 +1,9 @@
 <?php
 /**
- * Small generator script, just to make DB filling automated
+ * Small lazy-written generator script, just to make DB filling automated
  * since add/remove/edit actions were not required by the original specification
+ * not supposed to go to production and is safe to delete (do not forget menus,  routes, etc.!)
+ * Although this can be used as integration/acceptance test
  */
 
 namespace Application\Controller;
@@ -19,11 +21,11 @@ class ExampleGeneratorController extends AbstractActionController
         $objectManager = $this->getServiceLocator()->get('Doctrine\ORM\EntityManager');
 
         $titles = array('PHP Dev', 'QA', 'HR');
-        $languages = array( 'ru', 'en', 'it', 'fr', 'es', 'cn', 'jp', 'de', 'ua' );
+        $languages = array('ru', 'en', 'it', 'fr', 'es', 'cn', 'jp', 'de', 'ua');
 
         foreach ($titles as $divisionTitle) {
             $division = new Division();
-            $division->setTitle($divisionTitle . rand( 0, 1000 ));
+            $division->setTitle($divisionTitle . rand(0, 1000));
             $objectManager->persist($division);
 
             $vacancy = new Vacancy();
@@ -31,10 +33,12 @@ class ExampleGeneratorController extends AbstractActionController
 
             $objectManager->persist($vacancy);
 
+            $language = $languages[rand(0, 10)];
+
             $vacancyText = new VacancyText();
-            $vacancyText->setLanguage($languages[rand(0,10)]);
-            $vacancyText->setTitleText($divisionTitle . ' title' . rand( 0, 1000 ));
-            $vacancyText->setDescriptionText($divisionTitle . ' description' . rand( 0, 1000 ));
+            $vacancyText->setLanguage($language);
+            $vacancyText->setTitleText($divisionTitle . ' ' . $language . ' title' . rand(0, 1000));
+            $vacancyText->setDescriptionText($divisionTitle . ' ' . $language . ' description' . rand(0, 1000));
             $vacancyText->setVacancy($vacancy);
 
             $objectManager->persist($vacancyText);

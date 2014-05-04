@@ -1,16 +1,10 @@
 <?php
-/**
- * Zend Framework (http://framework.zend.com/)
- *
- * @link      http://github.com/zendframework/ZendSkeletonApplication for the canonical source repository
- * @copyright Copyright (c) 2005-2014 Zend Technologies USA Inc. (http://www.zend.com)
- * @license   http://framework.zend.com/license/new-bsd New BSD License
- */
 
 namespace Application\Controller;
 
 use Application\Form\SearchForm;
 use Application\Model\Application;
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Criteria;
 use Zend\Mvc\Controller\AbstractActionController;
 use Zend\View\Model\ViewModel;
@@ -19,43 +13,27 @@ class IndexController extends AbstractActionController
 {
     public function indexAction()
     {
+        $search = array('language' => '', 'division' => '');
+        /** @var \Doctrine\ORM\EntityManager $objectManager */
         $objectManager = $this->getServiceLocator()->get('Doctrine\ORM\EntityManager');
+        //TODO: Consider proper caching
+        $searchForm = $this->initializeForm($objectManager);
 
-        $searchForm = $this->initializeForm();
-
-        $vacanciesRepository = $objectManager->getRepository('Application\Entity\Vacancy');
+        //Check if we got any filters set
+        /** @var \Zend\Http\Request $request */
         $request = $this->getRequest();
         if ($request->isPost()) {
             $application = new Application();
             $searchForm->setInputFilter($application->getInputFilter());
             $searchForm->setData($request->getPost());
 
-            $criteria = Criteria::create();
             if ($searchForm->isValid()) {
-                //TODO: move this to model
                 $search = $searchForm->getData();
-                if (!empty($search['division'])) {
-                    $division = $objectManager->getRepository('Application\Entity\Division')->find($search['division']);
-                    if (!empty($division)) {
-                        $criteria->andWhere(Criteria::expr()->eq('division', $division));
-                    }
-                }
-                if (!empty($search['language'])) {
-                    $vacancyTexts = $objectManager->getRepository('Application\Entity\VacancyText')->matching(
-                        Criteria::create()->where(Criteria::expr()->in('language', array($search['language'], 'en')))
-                    );
-                    $languageVacancies = $vacancyTexts->map(
-                        function ($vacancyText) {
-                            return $vacancyText->getVacancy()->getId();
-                        }
-                    );
-                    $criteria->andWhere(
-                        Criteria::expr()->in('id', $languageVacancies->toArray())
-                    );
-                }
-                $vacancies = $vacanciesRepository->matching($criteria);
             }
         }
+
+        //Get vacancies according to filters
+        $vacancies = $this->getVacancies($search, $objectManager);
 
         $viewModel = new ViewModel();
         $viewModel->setVariable('vacancies', $vacancies);
@@ -68,34 +46,99 @@ class IndexController extends AbstractActionController
     }
 
     /**
-     * Prepares the form drop-down fields
-     *
+     * Prepares the form drop-down fields etc.
+     * @param \Doctrine\ORM\EntityManager $objectManager
      * @return SearchForm $searchForm
      */
-    private function initializeForm()
+    private function initializeForm($objectManager)
     {
-        $objectManager = $this->getServiceLocator()->get('Doctrine\ORM\EntityManager');
+        $searchForm = new SearchForm();
+        $searchForm->get('language')->setAttributes(array('options' => $this->getAvailableLanguages($objectManager)));
+        $searchForm->get('division')->setAttributes(array('options' => $this->getAvailableDivisions($objectManager)));
 
-        //TODO: move this block to an appropriate place
-        $query = $objectManager->createQuery('SELECT DISTINCT vt.language FROM Application\Entity\VacancyText vt');
-        $dbLanguages = $query->getResult();
+        return $searchForm;
+    }
+
+    /**
+     * @param \Doctrine\ORM\EntityManager $objectManager
+     * @return array $languages suitable to use in form select render
+     */
+    private function getAvailableLanguages($objectManager)
+    {
+        $dbLanguages = $objectManager
+            ->createQuery('SELECT DISTINCT vt.language FROM Application\Entity\VacancyText vt')
+            ->getResult();
+
+        //Could use a mapping function here, but simple foreach will suit
         $languages = array();
         foreach ($dbLanguages as $dbl) {
             $languages[$dbl['language']] = $dbl['language'];
         }
+        return $languages;
+    }
 
-        //TODO: move this block to an appropriate place
-        $query = $objectManager->createQuery('SELECT DISTINCT d.id, d.title FROM Application\Entity\Division d');
-        $dbDivisions = $query->getResult();
+    /**
+     * @param \Doctrine\ORM\EntityManager $objectManager
+     * @return array $divisions suitable to use in form select render
+     */
+    private function getAvailableDivisions($objectManager)
+    {
+        $dbDivisions = $objectManager
+            ->createQuery('SELECT DISTINCT d.id, d.title FROM Application\Entity\Division d')
+            ->getResult();
         $divisions = array();
         foreach ($dbDivisions as $dbd) {
             $divisions[$dbd['id']] = $dbd['title'];
         }
 
-        $searchForm = new SearchForm();
-        $searchForm->get('language')->setAttributes(array('options' => $languages));
-        $searchForm->get('division')->setAttributes(array('options' => $divisions));
+        return $divisions;
+    }
 
-        return $searchForm;
+    /**
+     * @param Array                       $search
+     * @param \Doctrine\ORM\EntityManager $objectManager
+     *
+     * @return ArrayCollection $vacancies
+     */
+    private function getVacancies($search, $objectManager)
+    {
+        $vacanciesRepository = $objectManager->getRepository('Application\Entity\Vacancy');
+        if (empty($search['language']) && empty($search['division'])) {
+            //Got no search? Print all vacancies out
+            return $vacanciesRepository->findAll();
+        }
+
+        //This way of DB filtering uses too many requests, yet looks far better then combining the query by hand
+        $criteria = Criteria::create();
+
+        if (!empty($search['division'])) {
+            $division = $objectManager
+                ->getRepository('Application\Entity\Division')
+                ->find($search['division']);
+
+            if (!empty($division)) {
+                $criteria->andWhere(Criteria::expr()->eq('division', $division));
+            }
+        }
+
+        if (!empty($search['language'])) {
+            //Find vacancyTexts of selected language, or English
+            $vacancyTexts = $objectManager->getRepository('Application\Entity\VacancyText')->matching(
+                Criteria::create()->where(Criteria::expr()->in('language', array($search['language'], 'en')))
+            );
+
+            $languageVacancies = $vacancyTexts->map(
+                function ($vacancyText) {
+                    /** @var \Application\Entity\VacancyText $vacancyText */
+                    return $vacancyText->getVacancy()->getId();
+                }
+            );
+
+            $criteria->andWhere(
+                Criteria::expr()->in('id', $languageVacancies->toArray())
+            );
+        }
+
+        return $vacanciesRepository->matching($criteria);
     }
 }

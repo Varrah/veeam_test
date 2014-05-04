@@ -25,12 +25,7 @@
                  * @var Application\Entity\Vacancy $vacancy
                  * @var Application\Entity\VacancyText $vacancyText
                  */
-                if ( empty($search['language']) ) {
-                    $lang = null;
-                } else {
-                    $lang = $search['language'];
-                }
-                $vacancyText = $vacancy->getVacancyTexts($lang)->first();
+                $vacancyText = $vacancy->getVacancyTexts($search['language'])->first();
                 if ( empty( $vacancyText ) ) {
                     //TODO: probably we should log this somehow make other type of warning - vacancies should have texts anyway
                     continue;

@@ -70,16 +70,20 @@ class Vacancy
      * if language is provided returns only texts in selected language
      * if text in selected language was not found - returns text in English
      * if text in English is not found - returns empty collection
+     *
      * @param string $language language code, as stored in DB/search form
+     *
      * @return ArrayCollection vacancyTexts
      */
-    public function getVacancyTexts( $language = null )
+    public function getVacancyTexts($language = null)
     {
-        if ( empty( $language ) ) {
+        if (empty($language)) {
             return $this->vacancyTexts;
         } else {
-            $texts = $this->vacancyTexts->matching(Criteria::create()->where(Criteria::expr()->eq('language', $language)));
-            if ( $texts->count() == 0 ){
+            $texts = $this->vacancyTexts->matching(
+                Criteria::create()->where(Criteria::expr()->eq('language', $language))
+            );
+            if ($texts->count() == 0) {
                 return $this->vacancyTexts->matching(Criteria::create()->where(Criteria::expr()->eq('language', 'en')));
             }
             return $texts;

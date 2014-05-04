@@ -12,27 +12,31 @@ use Zend\InputFilter\InputFilter;
 use Zend\InputFilter\InputFilterAwareInterface;
 use Zend\InputFilter\InputFilterInterface;
 
-class Application {
+class Application
+{
 
     protected $inputFilter;
 
-    public function getInputFilter() {
-        if ( !$this->inputFilter ) {
+    public function getInputFilter()
+    {
+        if (!$this->inputFilter) {
             $inputFilter = new InputFilter();
 
             $inputFilter->add(
                 array(
-                     'name'     => 'division',
-                     'required' => false,
+                     'name'        => 'division',
+                     'required'    => false,
                      'allow_empty' => true
-                ) );
+                )
+            );
 
             $inputFilter->add(
                 array(
-                     'name'       => 'language',
-                     'required'   => false,
+                     'name'        => 'language',
+                     'required'    => false,
                      'allow_empty' => true
-                ) );
+                )
+            );
 
             $this->inputFilter = $inputFilter;
         }
