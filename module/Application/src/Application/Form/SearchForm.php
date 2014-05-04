@@ -9,7 +9,6 @@
 namespace Application\Form;
 use Zend\Form\Form;
 
-
 class SearchForm extends Form
 {
     public function __construct($name = null)
@@ -18,11 +17,9 @@ class SearchForm extends Form
 
         $this->add(
             array(
-                 'name'        => 'division',
-                 'type'        => 'Zend\Form\Element\Select',
-                 'required'    => false,
-                 'allow_empty' => true,
-                 'options'     => array(
+                 'name'    => 'division',
+                 'type'    => 'Zend\Form\Element\Select',
+                 'options' => array(
                      'empty_option' => 'all',
                      'label'        => 'Division',
                  ),
@@ -30,11 +27,9 @@ class SearchForm extends Form
         );
         $this->add(
             array(
-                 'name'        => 'language',
-                 'type'        => 'Zend\Form\Element\Select',
-                 'required'    => false,
-                 'allow_empty' => true,
-                 'options'     => array(
+                 'name'    => 'language',
+                 'type'    => 'Zend\Form\Element\Select',
+                 'options' => array(
                      'empty_option' => 'all',
                      'label'        => 'Language',
                  ),

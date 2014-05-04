@@ -10,6 +10,8 @@
 namespace Application\Controller;
 
 use Application\Form\SearchForm;
+use Application\Model\Application;
+use Doctrine\Common\Collections\Criteria;
 use Zend\Mvc\Controller\AbstractActionController;
 use Zend\View\Model\ViewModel;
 
@@ -21,52 +23,64 @@ class IndexController extends AbstractActionController
 
         $searchForm = $this->initializeForm();
 
+        $vacanciesRepository = $objectManager->getRepository('Application\Entity\Vacancy');
         $request = $this->getRequest();
-        if ( $request->isPost() ) {
-            $searchForm->setData( $request->getPost() );
+        if ($request->isPost()) {
+            $application = new Application();
+            $searchForm->setInputFilter($application->getInputFilter());
+            $searchForm->setData($request->getPost());
 
-            if ( $searchForm->isValid() ) {
+            $criteria = Criteria::create();
+            if ($searchForm->isValid()) {
                 //TODO: move this to model
                 $search = $searchForm->getData();
-                $dql = <<<DQL
-                    SELECT v
-                    FROM Application\Entity\Vacancy v
-                    JOIN v.vacancyTexts vt
-                    JOIN v.division d
-                    WHERE
-                        d.id = {$search['division']} AND
-                        vt.language IN( 'en', '{$search['language']}')
-DQL;
-
-                $query = $objectManager->createQuery($dql);
-                //var_dump( $query );
-                $vacancies = $query->getResult();
-            } else {
-                $vacancies = $objectManager->getRepository( 'Application\Entity\Vacancy' )->findAll();
+                if (!empty($search['division'])) {
+                    $division = $objectManager->getRepository('Application\Entity\Division')->find($search['division']);
+                    if (!empty($division)) {
+                        $criteria->andWhere(Criteria::expr()->eq('division', $division));
+                    }
+                }
+                if (!empty($search['language'])) {
+                    $vacancyTexts = $objectManager->getRepository('Application\Entity\VacancyText')->matching(
+                        Criteria::create()->where(Criteria::expr()->in('language', array($search['language'], 'en')))
+                    );
+                    $languageVacancies = $vacancyTexts->map(
+                        function ($vacancyText) {
+                            return $vacancyText->getVacancy()->getId();
+                        }
+                    );
+                    $criteria->andWhere(
+                        Criteria::expr()->in('id', $languageVacancies->toArray())
+                    );
+                }
+                $vacancies = $vacanciesRepository->matching($criteria);
             }
-        } else {
-            $vacancies = $objectManager->getRepository( 'Application\Entity\Vacancy' )->findAll();
         }
 
         $viewModel = new ViewModel();
         $viewModel->setVariable('vacancies', $vacancies);
         $viewModel->setVariable('searchForm', $searchForm);
+        if (!empty($search)) {
+            $viewModel->setVariable('search', $search);
+        }
 
         return $viewModel;
     }
 
     /**
      * Prepares the form drop-down fields
+     *
      * @return SearchForm $searchForm
      */
-    private function initializeForm() {
+    private function initializeForm()
+    {
         $objectManager = $this->getServiceLocator()->get('Doctrine\ORM\EntityManager');
 
         //TODO: move this block to an appropriate place
         $query = $objectManager->createQuery('SELECT DISTINCT vt.language FROM Application\Entity\VacancyText vt');
         $dbLanguages = $query->getResult();
         $languages = array();
-        foreach ( $dbLanguages as $dbl ) {
+        foreach ($dbLanguages as $dbl) {
             $languages[$dbl['language']] = $dbl['language'];
         }
 
@@ -74,13 +88,13 @@ DQL;
         $query = $objectManager->createQuery('SELECT DISTINCT d.id, d.title FROM Application\Entity\Division d');
         $dbDivisions = $query->getResult();
         $divisions = array();
-        foreach ( $dbDivisions as $dbd ) {
+        foreach ($dbDivisions as $dbd) {
             $divisions[$dbd['id']] = $dbd['title'];
         }
 
         $searchForm = new SearchForm();
-        $searchForm->get('language')->setAttributes( array( 'options' => $languages ) );
-        $searchForm->get('division')->setAttributes( array( 'options' => $divisions ) );
+        $searchForm->get('language')->setAttributes(array('options' => $languages));
+        $searchForm->get('division')->setAttributes(array('options' => $divisions));
 
         return $searchForm;
     }

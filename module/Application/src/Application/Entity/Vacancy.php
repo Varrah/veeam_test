@@ -8,6 +8,7 @@
 
 namespace Application\Entity;
 use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Criteria;
 use Doctrine\ORM\Mapping as ORM;
 
 /** @ORM\Entity */
@@ -65,31 +66,23 @@ class Vacancy
     }
 
     /**
-     * @return mixed
+     * Returns vacancy texts as Doctrine\Common\Collections\ArrayCollection
+     * if language is provided returns only texts in selected language
+     * if text in selected language was not found - returns text in English
+     * if text in English is not found - returns empty collection
+     * @param string $language language code, as stored in DB/search form
+     * @return ArrayCollection vacancyTexts
      */
-    public function getVacancyTexts()
+    public function getVacancyTexts( $language = null )
     {
-        return $this->vacancyTexts;
-    }
-
-    /**
-     * @param string $language a two-letter language-code
-     *
-     * @return VacancyText|null
-     */
-    public function getVacancyTextByLanguage( $language ) {
-        //TODO: Replace with ArrayCollection::matching() call
-        if ( empty( $this->vacancyTexts ) ) {
-            return null;
-        }
-
-        foreach ( $this->vacancyTexts as $vt ) {
-            /** VacancyText $vt */
-            if ( $vt->getLanguage() == $language ) {
-                return $vt;
+        if ( empty( $language ) ) {
+            return $this->vacancyTexts;
+        } else {
+            $texts = $this->vacancyTexts->matching(Criteria::create()->where(Criteria::expr()->eq('language', $language)));
+            if ( $texts->count() == 0 ){
+                return $this->vacancyTexts->matching(Criteria::create()->where(Criteria::expr()->eq('language', 'en')));
             }
+            return $texts;
         }
-
-        return null;
     }
 }

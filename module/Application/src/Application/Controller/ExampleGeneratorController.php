@@ -1,10 +1,7 @@
 <?php
 /**
- * Zend Framework (http://framework.zend.com/)
- *
- * @link      http://github.com/zendframework/ZendSkeletonApplication for the canonical source repository
- * @copyright Copyright (c) 2005-2014 Zend Technologies USA Inc. (http://www.zend.com)
- * @license   http://framework.zend.com/license/new-bsd New BSD License
+ * Small generator script, just to make DB filling automated
+ * since add/remove/edit actions were not required by the original specification
  */
 
 namespace Application\Controller;
@@ -22,9 +19,11 @@ class ExampleGeneratorController extends AbstractActionController
         $objectManager = $this->getServiceLocator()->get('Doctrine\ORM\EntityManager');
 
         $titles = array('PHP Dev', 'QA', 'HR');
+        $languages = array( 'ru', 'en', 'it', 'fr', 'es', 'cn', 'jp', 'de', 'ua' );
+
         foreach ($titles as $divisionTitle) {
             $division = new Division();
-            $division->setTitle($divisionTitle);
+            $division->setTitle($divisionTitle . rand( 0, 1000 ));
             $objectManager->persist($division);
 
             $vacancy = new Vacancy();
@@ -33,9 +32,9 @@ class ExampleGeneratorController extends AbstractActionController
             $objectManager->persist($vacancy);
 
             $vacancyText = new VacancyText();
-            $vacancyText->setLanguage('en');
-            $vacancyText->setTitleText($divisionTitle . ' title');
-            $vacancyText->setDescriptionText($divisionTitle . ' description');
+            $vacancyText->setLanguage($languages[rand(0,10)]);
+            $vacancyText->setTitleText($divisionTitle . ' title' . rand( 0, 1000 ));
+            $vacancyText->setDescriptionText($divisionTitle . ' description' . rand( 0, 1000 ));
             $vacancyText->setVacancy($vacancy);
 
             $objectManager->persist($vacancyText);

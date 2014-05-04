@@ -1,3 +1,8 @@
+<?php
+/**
+ * @var SearchForm $searchForm
+ */
+?>
 <div class="row">
     <div class="row">
         <?php echo $this->form()->openTag($searchForm); ?>
@@ -16,15 +21,19 @@
             </tr>
             <?php
             foreach ($vacancies as $vacancy) {
-                /** @var Application\Entity\Vacancy $vacancy */
-                $search['language'] = 'ru';
-                $vacancyText = $vacancy->getVacancyTextByLanguage($search['language']);
-                if (empty($vacancyText)) {
-                    $vacancyText = $vacancy->getVacancyTextByLanguage('en');
-                    if (empty($vacancyText)) {
-                        //TODO: log such event somehow
-                        continue;
-                    }
+                /**
+                 * @var Application\Entity\Vacancy $vacancy
+                 * @var Application\Entity\VacancyText $vacancyText
+                 */
+                if ( empty($search['language']) ) {
+                    $lang = null;
+                } else {
+                    $lang = $search['language'];
+                }
+                $vacancyText = $vacancy->getVacancyTexts($lang)->first();
+                if ( empty( $vacancyText ) ) {
+                    //TODO: probably we should log this somehow make other type of warning - vacancies should have texts anyway
+                    continue;
                 }
                 ?>
                 <tr>
